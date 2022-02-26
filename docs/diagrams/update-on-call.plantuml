@@ -1,0 +1,17 @@
+participant "VictorOps" as victorops
+participant "Slack" as slack
+participant "API Gateway" as apigateway
+participant "Lambda" as lambda
+participant "DynamoDB" as dynamodb
+participant "Secrets Manager" as secretsmanager
+
+victorops->apigateway: POST /rotationupdater
+apigateway->lambda: Invoke
+lambda->dynamodb: Get VictorOps-Slack info mapping
+dynamodb-->lambda: VictorOps-Slack info mapping
+lambda->secretsmanager: Get Slack User Bot OAuth token
+secretsmanager-->lambda: Slack User Bot OAuth token
+lambda->slack: POST /api/usergroups.users.update
+slack-->lambda: OK
+lambda-->apigateway: OK
+apigateway-->victorops: OK

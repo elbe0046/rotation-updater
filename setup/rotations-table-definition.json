@@ -1,0 +1,19 @@
+{
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "victorOpsGroupId",
+      "AttributeType": "S"
+    }
+  ],
+  "TableName": "rotation-updater_rotations",
+  "KeySchema": [
+    {
+      "AttributeName": "victorOpsGroupId",
+      "KeyType": "HASH"
+    }
+  ],
+  "ProvisionedThroughput": {
+    "ReadCapacityUnits": 1,
+    "WriteCapacityUnits": 1
+  }
+}
