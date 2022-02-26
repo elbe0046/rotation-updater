@@ -1,0 +1,37 @@
+{
+  "devDependencies": {
+    "eslint": "^8.11.0",
+    "eslint-config-google": "^0.14.0"
+  },
+  "name": "rotation-updater",
+  "description": "The `rotation-updater` facilitates automating the updating of slack on-call user group assignment via VictorOps outgoing webhooks and an AWS lambda function.",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "eslint": "npx eslint ./src --fix",
+    "jsdoc": "jsdoc -c ./jsconf.json ./src",
+    "start": "node src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "zip": "./zip_lambda.sh",
+    "upload": "./upload_lambda.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elbe0046/rotation-updater.git"
+  },
+  "author": "Grant Elbert",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/elbe0046/rotation-updater/issues"
+  },
+  "homepage": "https://github.com/elbe0046/rotation-updater#readme",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.54.0",
+    "@aws-sdk/client-secrets-manager": "^3.54.0",
+    "@aws-sdk/lib-dynamodb": "^3.54.0",
+    "node-fetch": "^3.2.3"
+  }
+}
