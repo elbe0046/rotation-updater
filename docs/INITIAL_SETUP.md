@@ -111,9 +111,9 @@ aws iam list-roles --query 'Roles[?RoleName==`app-rotation-updater`].Arn' --outp
 
 ## Creating the lambda
 
-From the project root prep the zip.
+Prep the zip.
 ```sh
-./zip_lambda.sh
+npm run zip
 ```
 
 Create the lambda
