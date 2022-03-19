@@ -2,4 +2,4 @@
 
 set -e
 
-aws lambda update-function-code --function-name rotation-updater-prod_useast1 --zip-file fileb://lambda.zip
+aws lambda update-function-code --function-name rotation-updater --zip-file fileb://lambda.zip
