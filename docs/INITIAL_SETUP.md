@@ -1,8 +1,8 @@
 When creating any of the AWS resources listed here make sure to check for any
 naming collisions and update accordingly.
 
-Splunk On-Call & VictorOps are used somewhat interchangeably throughout, but
-often falling back on VictorOps.
+The names Splunk On-Call & VictorOps are used somewhat interchangeably
+throughout, but often falling back on VictorOps.
 
 See [setup](../setup) for all of the files referenced as `file://` throughout.
 
@@ -66,12 +66,12 @@ aws dynamodb describe-table --table-name rotation-updater_rotations --query 'Tab
 
 For observability purposes we'll want access to our lambda's logs.
 ```sh
-aws logs create-log-group --log-group-name /aws/lambda/rotation-updater-prod_useast1
+aws logs create-log-group --log-group-name /aws/lambda/rotation-updater
 ```
 
 Get the log group ARN (`log-group-arn`)
 ```sh
-aws logs describe-log-groups --log-group-name /aws/lambda/rotation-updater-prod_useast1 --query 'logGroups[0].arn' --output text
+aws logs describe-log-groups --log-group-name /aws/lambda/rotation-updater --query 'logGroups[0].arn' --output text
 ```
 
 ## Lambda policy & role
@@ -118,12 +118,12 @@ npm run zip
 
 Create the lambda
 ```sh
-aws lambda create-function --function-name rotation-updater-prod_useast1 --zip-file fileb://path/to/lambda.zip --handler index.handler --runtime nodejs14.x --role {role-arn} --environment '{"Variables": {"ROTATIONS_TABLE": "rotation-updater_rotations", "SLACK_TOKEN_SECRET_NAME": "RotationUpdaterSlackBotUserOauthToken"}}'
+aws lambda create-function --function-name rotation-updater --zip-file fileb://path/to/lambda.zip --handler index.handler --runtime nodejs14.x --role {role-arn} --environment '{"Variables": {"ROTATIONS_TABLE": "rotation-updater_rotations", "SLACK_TOKEN_SECRET_NAME": "RotationUpdaterSlackBotUserOauthToken"}}'
 ```
 
 Get the lambda ARN
 ```sh
-aws lambda get-function --function-name rotation-updater-prod_useast1 --query 'Configuration.FunctionArn' --output text
+aws lambda get-function --function-name rotation-updater --query 'Configuration.FunctionArn' --output text
 ```
 
 ## API Gateway REST API
@@ -205,7 +205,7 @@ aws apigateway create-usage-plan-key --usage-plan-id {usage-plan-id} --key-id {a
 
 Give API gateway permissions to invoke our lambda function
 ```sh
-aws lambda add-permission --function-name rotation-updater-prod_useast1 --statement-id apigateway --action lambda:InvokeFunction --principal apigateway.amazonaws.com --source-arn "arn:aws:execute-api:us-east-1:{account-id}:{rest-api-id}/*/POST/rotationupdater"
+aws lambda add-permission --function-name rotation-updater --statement-id apigateway --action lambda:InvokeFunction --principal apigateway.amazonaws.com --source-arn "arn:aws:execute-api:us-east-1:{account-id}:{rest-api-id}/*/POST/rotationupdater"
 ```
 
 ## VictorOps outgoing webhook
