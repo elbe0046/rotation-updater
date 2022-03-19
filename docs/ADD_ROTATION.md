@@ -7,7 +7,7 @@ to it.
 For this you'll need to determine:
 - Your VictorOps rotation ID
 - Your Slack User Group ID
-- Each rotation member's VictorOps ID
+- Each rotation member's VictorOps User ID
 - Each rotation member's Slack User ID
 
 You'll also need to get the `rotation-updater`'s API key from AWS apigateway, as well as the REST API ID.
@@ -31,7 +31,7 @@ Sign into slack and navigate to https://app.slack.com/client > `People & user gr
 
 Search for & select the desired user, `More` > `Copy Member ID`
 
-#### VictorOps member ID
+#### VictorOps User ID
 
 In VictorOps go to `Users`, search for the given user, then the value is in the `User Name` column.
 
@@ -42,31 +42,37 @@ Sign into slack and navigate to https://app.slack.com/client > `People & user gr
 Search for & select the desired user group, get the user group ID from the URL:
 https://app.slack.com/client/{_}/browse-user-groups/user_groups/{slack-user-group-id}
 
-#### Add the mapping to the `rotation-updater` DynamoDb table
+#### Add the team to the `rotation-updater_teams` DynamoDb table
 
-Fill out the above information into this template and save to a `put-rotation.json`:
+Fill out the above information into this template and save to a `put-team.json`:
 ```json
 {
-  "operation": "putRotation",
+  "operation": "putTeam",
   "victorOpsGroupId": "{victor-ops-group-id}",
-  "slackUserGroupId": "{slack-user-group-id}",
-  "members": [
-    {
-      "victorOpsUserId": "{member1-victor-ops-user-id}",
-      "slackUserId": "{member1-slack-user-id}"
-    },
-    {
-      "victorOpsUserId": "{memberN-victor-ops-user-id}",
-      "slackUserId": "{memberN-slack-user-id}"
-    }
-  ]
+  "slackUserGroupId": "{slack-user-group-id}"
 }
 ```
 
-Now send the request to the lambda
+For each team member do similarly for a `put-user.json`:
+```
+{
+  "operation": "putUser",
+  "victorOpsUserId": "{memberN-victor-ops-user-id}",
+  "slackUserId": "{memberN-slack-user-id}"
+}
+```
+
+Now send the requests to the lambda
 ```sh
 API_KEY={API-key-from-API-gateway}
 REQ=$(jq -c < put-rotation.json)
+curl -X POST https://{rest-api-id}.execute-api.us-east-1.amazonaws.com/prod/rotationupdater \
+  -H "x-api-key: $API_KEY" \
+  -H "content-type: application/json" \
+  -d "$REQ"
+
+# For each user
+REQ=$(jq -c < put-user.json)
 curl -X POST https://{rest-api-id}.execute-api.us-east-1.amazonaws.com/prod/rotationupdater \
   -H "x-api-key: $API_KEY" \
   -H "content-type: application/json" \

@@ -11,7 +11,8 @@ import {
 } from '@aws-sdk/client-secrets-manager';
 
 const REGION = process.env.AWS_REGION;
-const ROTATIONS_TABLE = process.env.ROTATIONS_TABLE;
+const TEAMS_TABLE = process.env.TEAMS_TABLE;
+const USERS_TABLE = process.env.USERS_TABLE;
 const SLACK_TOKEN_SECRET_NAME = process.env.SLACK_TOKEN_SECRET_NAME;
 
 /**
@@ -28,7 +29,7 @@ let secretsClient;
  * Represents a user that has both a VictorOps user ID as well as an associated
  * Slack user ID.
  **/
-class Member {
+class User {
   /**
    * @param {string} victorOpsUserId
    * @param {string} slackUserId
@@ -43,40 +44,20 @@ class Member {
 }
 
 /**
- * Represents a database record which contains the mappings between VictorOps &
- * Slack for:
- * - Teams / User Groups
- * - Users
+ * Represents a team which has both a VictorOps team name as well as an
+ * associated Slack User Group ID.
  **/
-class Record {
+class Team {
   /**
   * @param {string} victorOpsGroupId
   * @param {string} slackUserGroupId
-  * @param {Member[]} members
   **/
   constructor(
       victorOpsGroupId,
       slackUserGroupId,
-      members,
   ) {
     this.victorOpsGroupId = victorOpsGroupId;
     this.slackUserGroupId = slackUserGroupId;
-    this.members = members;
-  }
-
-  /**
-  * Returns the first Slack User ID for the user matching the provided
-  * VictorOps User ID, if any.
-  *
-  * @param {string} victorOpsUserId
-  * @param {Member[]} members
-  * @return {string} The associated Slack User ID, if any.
-  **/
-  getSlackUserId(victorOpsUserId) {
-    const member = this.members.find((m) =>
-      m.victorOpsUserId === victorOpsUserId,
-    );
-    return member?.slackUserId;
   }
 }
 
@@ -152,6 +133,10 @@ async function updateSlackUserGroup(
     slackUser,
     botUserOAuthToken,
 ) {
+  console.log(
+      'Updating Slack User Group (' + slackUserGroup + ') to User (' +
+    slackUser + ')',
+  );
   const data = {
     // The encoded ID of the User Group to update.
     usergroup: slackUserGroup,
@@ -188,19 +173,19 @@ async function handleUpdateOnCall(
   const victorOpsGroupId = event.group;
   const victorOpsUserId = event.user;
 
-  const record = await getRotation(
+  const team = await getTeam(
       victorOpsGroupId,
   );
-  if (record == null) {
-    console.log('Rotation not found for victorOpsGroupId: ' + victorOpsGroupId);
+  if (team?.slackUserGroupId == null) {
+    console.log('Team not found for victorOpsGroupId: ' + victorOpsGroupId);
     return null;
   }
 
-  const slackUser = record.getSlackUserId(victorOpsUserId);
-  if (slackUser == null) {
-    console.log(
-        'Slack user ID not found for victorOpsUserId: ' + victorOpsUserId,
-    );
+  const user = await getUser(
+      victorOpsUserId,
+  );
+  if (user?.slackUserId == null) {
+    console.log('User not found for victorOpsUserId: ' + victorOpsUserId);
     return null;
   }
 
@@ -211,8 +196,8 @@ async function handleUpdateOnCall(
   }
 
   let resp = await updateSlackUserGroup(
-      record.slackUserGroupId,
-      slackUser,
+      team.slackUserGroupId,
+      user.slackUserId,
       secret,
   );
 
@@ -224,24 +209,22 @@ async function handleUpdateOnCall(
 }
 
 /**
- * Stores the provided VictorOps / Slack mapping into the DynamoDb table.
+ * Stores the provided {Team} into the teams DynamoDb table.
  *
- * @param {object} event The event containing the VictorOps / Slack mapping.
+ * @param {object} event The event containing the {Team}.
  * @return {object} The response from DynamoDb.
  **/
-async function handlePutRotation(
+async function handlePutTeam(
     event,
 ) {
-  const record = new Record(
+  const team = new Team(
       event.victorOpsGroupId,
       event.slackUserGroupId,
-      event.members.map((member) =>
-        new Member(member.victorOpsUserId, member.slackUserId)),
   );
 
   let resp = await dynamoDbClient().put({
-    TableName: ROTATIONS_TABLE,
-    Item: record,
+    TableName: TEAMS_TABLE,
+    Item: team,
   });
 
   resp = {
@@ -252,49 +235,47 @@ async function handlePutRotation(
 }
 
 /**
- * Retrieves the VictorOps / Slack mapping from the DynamoDb table
- * corresponding to the provided VictorOps group ID.
+ * Retrieves the {Team} from the teams DynamoDb table corresponding to the
+ * provided VictorOps group ID.
  *
- * @param {string} victorOpsGroupId The VictorOps groupd ID.
- * @return {Record} The VictorOps / Slack mapping.
+ * @param {string} victorOpsGroupId The VictorOps group ID.
+ * @return {Team} The team.
  **/
-async function getRotation(
+async function getTeam(
     victorOpsGroupId,
 ) {
   const resp = await dynamoDbClient().get({
-    TableName: ROTATIONS_TABLE,
+    TableName: TEAMS_TABLE,
     Key: {
       victorOpsGroupId,
     },
   });
 
   if (resp?.Item == null) {
-    console.log('Rotation not found for victorOpsGroupId: ' + victorOpsGroupId);
+    console.log('Team not found for victorOpsGroupId: ' + victorOpsGroupId);
     return null;
   }
 
-  const record = new Record(
+  const team = new Team(
       resp.Item.victorOpsGroupId,
       resp.Item.slackUserGroupId,
-      resp.Item.members.map((member) =>
-        new Member(member.victorOpsUserId, member.slackUserId)),
   );
 
-  return record;
+  return team;
 }
 
 /**
- * Retrieves the VictorOps / Slack mapping from the DynamoDb table
- * corresponding to the provided VictorOps group ID.
+ * Retrieves the {Team} from the teams DynamoDb table corresponding to the
+ * provided VictorOps group ID.
  *
  * @param {object} event The event containing the VictorOps group ID.
- * @return {object} The response containing the mapping in its body.
+ * @return {object} The response containing the {Team} in its body.
  **/
-async function handleGetRotation(
+async function handleGetTeam(
     event,
 ) {
   const victorOpsGroupId = event.victorOpsGroupId;
-  let resp = await getRotation(victorOpsGroupId);
+  let resp = await getTeam(victorOpsGroupId);
 
   resp = {
     body: JSON.stringify(resp ?? {}),
@@ -304,19 +285,119 @@ async function handleGetRotation(
 }
 
 /**
- * Deletes the associated VictorOps / Slack mapping from the DynamoDb table.
+ * Deletes the associated {Team} from the teams DynamoDb table.
  *
  * @param {object} event The event containing the VictorOps group ID.
  * @return {object} The response from DynamoDb.
  **/
-async function handleDeleteRotation(
+async function handleDeleteTeam(
     event,
 ) {
   const victorOpsGroupId = event.victorOpsGroupId;
   let resp = await dynamoDbClient().delete({
-    TableName: ROTATIONS_TABLE,
+    TableName: TEAMS_TABLE,
     Key: {
       victorOpsGroupId,
+    },
+  });
+
+  resp = {
+    body: JSON.stringify(resp?.Item ?? {}),
+  };
+
+  return resp;
+}
+
+/**
+ * Stores the provided {User} into the users DynamoDb table.
+ *
+ * @param {object} event The event containing the {User}.
+ * @return {object} The response from DynamoDb.
+ **/
+async function handlePutUser(
+    event,
+) {
+  const user = new User(
+      event.victorOpsUserId,
+      event.slackUserId,
+  );
+
+  let resp = await dynamoDbClient().put({
+    TableName: USERS_TABLE,
+    Item: user,
+  });
+
+  resp = {
+    body: JSON.stringify(resp ?? {}),
+  };
+
+  return resp;
+}
+
+/**
+ * Retrieves the {User} from the users DynamoDb table corresponding to the
+ * provided VictorOps user ID.
+ *
+ * @param {string} victorOpsUserId The VictorOps user ID.
+ * @return {User} The user.
+ **/
+async function getUser(
+    victorOpsUserId,
+) {
+  const resp = await dynamoDbClient().get({
+    TableName: USERS_TABLE,
+    Key: {
+      victorOpsUserId,
+    },
+  });
+
+  if (resp?.Item == null) {
+    console.log('User not found for victorOpsUserId: ' + victorOpsUserId);
+    return null;
+  }
+
+  const user = new User(
+      resp.Item.victorOpsUserId,
+      resp.Item.slackUserId,
+  );
+
+  return user;
+}
+
+/**
+ * Retrieves the {User} from the users DynamoDb table corresponding to the
+ * provided VictorOps user ID.
+ *
+ * @param {object} event The event containing the VictorOps user ID.
+ * @return {object} The response containing the {User} in its body.
+ **/
+async function handleGetUser(
+    event,
+) {
+  const victorOpsUserId = event.victorOpsUserId;
+  let resp = await getUser(victorOpsUserId);
+
+  resp = {
+    body: JSON.stringify(resp ?? {}),
+  };
+
+  return resp;
+}
+
+/**
+ * Deletes the associated {User} from the users DynamoDb table.
+ *
+ * @param {object} event The event containing the VictorOps user ID.
+ * @return {object} The response from DynamoDb.
+ **/
+async function handleDeleteUser(
+    event,
+) {
+  const victorOpsUserId = event.victorOpsUserId;
+  let resp = await dynamoDbClient().delete({
+    TableName: USERS_TABLE,
+    Key: {
+      victorOpsUserId,
     },
   });
 
@@ -337,14 +418,23 @@ export const handler = async (event, context, callback) => {
     case 'updateOnCall':
       resp = await handleUpdateOnCall(event);
       break;
-    case 'putRotation':
-      resp = await handlePutRotation(event);
+    case 'putTeam':
+      resp = await handlePutTeam(event);
       break;
-    case 'getRotation':
-      resp = await handleGetRotation(event);
+    case 'getTeam':
+      resp = await handleGetTeam(event);
       break;
-    case 'deleteRotation':
-      resp = await handleDeleteRotation(event);
+    case 'deleteTeam':
+      resp = await handleDeleteTeam(event);
+      break;
+    case 'putUser':
+      resp = await handlePutUser(event);
+      break;
+    case 'getUser':
+      resp = await handleGetUser(event);
+      break;
+    case 'deleteUser':
+      resp = await handleDeleteUser(event);
       break;
     default:
       console.log('Unrecognized operation: ' + op);

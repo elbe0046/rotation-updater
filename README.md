@@ -3,6 +3,13 @@
 The `rotation-updater` facilitates automating the updating of slack on-call user
 group assignment via VictorOps outgoing webhooks and an AWS lambda function.
 
+*Important:* Note that at present VictorOps outgoing webhooks for on-call
+notifications do not provide any available variables for indicating either
+rotation or escalation policy. As such the VictorOps team used here should only
+contain the single rotation & escalation policy which we're associating with
+the Slack User Group. This may mean creating a new dedicated team in VictorOps
+specifically for this purpose.
+
 ## Initial setup
 
 To get everything setup for the first time see the [initial setup instructions](docs/INITIAL_SETUP.md).
