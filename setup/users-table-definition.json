@@ -1,14 +1,14 @@
 {
   "AttributeDefinitions": [
     {
-      "AttributeName": "victorOpsGroupId",
+      "AttributeName": "victorOpsUserId",
       "AttributeType": "S"
     }
   ],
-  "TableName": "rotation-updater_rotations",
+  "TableName": "rotation-updater_users",
   "KeySchema": [
     {
-      "AttributeName": "victorOpsGroupId",
+      "AttributeName": "victorOpsUserId",
       "KeyType": "HASH"
     }
   ],

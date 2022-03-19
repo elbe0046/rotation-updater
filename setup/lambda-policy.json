@@ -21,7 +21,21 @@
                 "dynamodb:Query",
                 "dynamodb:UpdateItem"
             ],
-            "Resource": "{table-arn}"
+            "Resource": "{teams-table-arn}"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:BatchGetItem",
+                "dynamodb:BatchWriteItem",
+                "dynamodb:PutItem",
+                "dynamodb:GetItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:Scan",
+                "dynamodb:Query",
+                "dynamodb:UpdateItem"
+            ],
+            "Resource": "{users-table-arn}"
         },
         {
             "Effect": "Allow",

@@ -49,17 +49,18 @@ Get the secret ARN (`slack-bot-user-oauth-token-arn`)
 aws secretsmanager describe-secret --secret-id RotationUpdaterSlackBotUserOauthToken --query 'ARN' --output text
 ```
 
-## DynamoDB table
+## DynamoDB tables
 
-We'll need a table in which to store our mappings between Splunk On-Call and
-Slack rotations information.
+We'll need tables in which to store our teams and users.
 ```sh
-aws dynamodb create-table --cli-input-json file://rotations-table-definition.json
+aws dynamodb create-table --cli-input-json file://teams-table-definition.json
+aws dynamodb create-table --cli-input-json file://users-table-definition.json
 ```
 
-Get the table ARN (`table-arn`)
+Get the table ARN (`teams-table-arn`, `users-table-arn`)
 ```sh
-aws dynamodb describe-table --table-name rotation-updater_rotations --query 'Table.TableArn' --output text
+aws dynamodb describe-table --table-name rotation-updater_teams --query 'Table.TableArn' --output text
+aws dynamodb describe-table --table-name rotation-updater_users --query 'Table.TableArn' --output text
 ```
 
 ## Log group
@@ -118,7 +119,7 @@ npm run zip
 
 Create the lambda
 ```sh
-aws lambda create-function --function-name rotation-updater --zip-file fileb://path/to/lambda.zip --handler index.handler --runtime nodejs14.x --role {role-arn} --environment '{"Variables": {"ROTATIONS_TABLE": "rotation-updater_rotations", "SLACK_TOKEN_SECRET_NAME": "RotationUpdaterSlackBotUserOauthToken"}}'
+aws lambda create-function --function-name rotation-updater --zip-file fileb://path/to/lambda.zip --handler index.handler --runtime nodejs14.x --role {role-arn} --environment '{"Variables": {"TEAMS_TABLE": "rotation-updater_teams", "USERS_TABLE": "rotation-updater_users", "SLACK_TOKEN_SECRET_NAME": "RotationUpdaterSlackBotUserOauthToken"}}'
 ```
 
 Get the lambda ARN
